@@ -2,7 +2,7 @@
   <div class="container">
     <div class="top-right-buttons">
       <button v-if="!isConnected" id="connectWallet" class="connect-button" @click="enableEthereum">Connect wallet</button>
-      <button v-else id="disconnectWallet" class="disconnect-button" @click="disconnectWallet">Disconnect wallet</button>
+      <button v-else id="disconnectWallet" class="disconnect-button">{{ currentAccount }}</button>
     </div>
     <div class="account">
       <h2 class="mb-3">Account: <span id="currentAccount"></span></h2>
@@ -22,7 +22,7 @@
           <h2 class="mb-3">Commit & Mint</h2>
             <div class="form-group">
             <label for="Salt">Salt:</label>
-            <input type="text" class="form-control" id="salt">
+            <input type="text" class="form-control" id="salt" v-model="salt">
             </div>
             <button :disabled="!currentAccount" type="submit" class="btn btn-primary">Commit & Mint</button>
         </form>
@@ -31,25 +31,41 @@
       <div v-else-if="tab==='deploy'" class="form-container">
         <form id="deploy" @submit.prevent="deploy">
           <h2 class="mb-3">Deploy</h2>
+          <div class="form-group" v-for="(deployAddress) in deployAddresses" :key="deployAddress">
+            <label class="label-address" :for="'input'+index" @click="set_salt(deployAddress)">{{ deployAddress.toHexString() }}</label>
+          </div>
             <div class="form-group">
             <label for="saltHash">saltHash:</label>
-            <input type="text" class="form-control" id="saltHashDeploy">
+            <input type="text" class="form-control" id="saltHashDeploy" v-model="saltHashDeploy">
             <label for="byteCode">byteCode:</label>
-            <input type="text" class="form-control" id="byteCodeDeploy">
+            <input type="text" class="form-control" id="byteCodeDeploy" v-model="byteCodeDeploy">
             </div>
             <button type="submit" class="btn btn-primary">Deploy contract</button>
         </form>
       </div>
       <div v-else-if="tab==='safe'" class="form-container">
-        <form>
-          <h2 class="mb-3">Additional Inputs</h2>
-          <div class="form-group" v-for="(input, index) in inputs" :key="index">
-          <label :for="'input'+index">Input {{ index + 1 }}:</label>
-          <input type="text" class="form-control" :id="'input'+index" v-model="inputs[index]">
+        <form id="deploySafe" @submit.prevent="deploySafe">
+          <h2 class="mb-3">Owners</h2>
+          <div class="form-group" v-for="(deployAddress) in deployAddresses" :key="deployAddress">
+            <label class="label-address" :for="'input'+index" @click="set_salt(deployAddress)">{{ deployAddress.toHexString() }}</label>
           </div>
-          <button type="button" class="btn btn-primary mb-2" @click="addInput">+</button>
-          <label :for="'input'+index">Threshold:</label>
-          <input type="text" class="form-control" :id="threshold" v-model="threshold">
+          <div class="form-group" v-for="(input, index) in inputs" :key="index">
+            <label :for="'input'+index">Owner {{ index + 1 }}:</label>
+            <input type="text" class="form-control" :id="'input'+index" v-model="inputs[index]">
+          </div>
+          <div>
+            <button type="button" class="btn btn-primary mb-2" @click="addInput">+</button>
+          </div>
+          <br>
+          <div class="threshold">
+            <label :for="'input'+index">Threshold:</label>
+            <input type="text" class="form-control-threshold" :id="threshold" v-model="threshold">
+          </div>
+          <div class="form-group">
+            <label for="saltHash">saltHash:</label>
+            <input type="text" class="form-control" id="saltHashDeploy" v-model="saltHashDeploy">
+            </div>
+          <button type="submit" class="btn btn-primary">Deploy contract</button>
         </form>
       </div>
     </div>
@@ -66,12 +82,16 @@
     setup() {
       const currentAccount = ref(null);
       let currentNftBalance = ref(0)
+      let deployAddresses = ref([])
       const salt = ref('');
       let saltHashDeploy = ref('');
       let byteCodeDeploy = ref('')
       const isConnected = ref(false);
       const inputs = ref(['']);
+      const threshold = ref(0)
       const tab = ref('commit')
+
+      const factoryAddress = '0x39Fa0171672765Abf9A645912dd31f76bD58f00A'
 
       const addInput = () => {
         inputs.value.push(''); // add new input to the array
@@ -79,11 +99,39 @@
 
       const getNftBalance = async (currentAddress) => {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const contractAddress = '0xf20aca635cc4efcd5709cc1e78db4476a075db1b';
+        const contractAddress = factoryAddress;
         const contract = new ethers.Contract(contractAddress, abi, provider);
-        const metaUri = await contract.balanceOf(currentAddress);
-        return metaUri
+        const balance = await contract.balanceOf(currentAddress);
+
+        return balance
       }
+
+      const getDeployAddresses = async (currentAddress) => {
+        let deployAddresses = []
+        let deployAddress = 0
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const contractAddress = factoryAddress;
+        const contract = new ethers.Contract(contractAddress, abi, provider);
+        for (let i=0; i< 20; i++){
+          try{
+            console.log(i)
+            deployAddress = await contract.tokenOfOwnerByIndex(currentAddress, i)
+            
+            console.log('deployAddresses', deployAddress)
+            deployAddresses.push(deployAddress)
+          }
+          catch{
+            break
+          }
+        }
+
+        return deployAddresses
+      }
+
+      const set_salt = (deployAddress) =>{
+        saltHashDeploy.value = deployAddress
+      } 
+
   
       const enableEthereum = async () => {
         try {
@@ -91,6 +139,9 @@
           if (accounts[0] !== currentAccount.value ) {
             currentAccount.value = accounts[0];
             isConnected.value = true;
+            currentNftBalance.value = await getNftBalance(currentAccount.value)
+            deployAddresses.value = await getDeployAddresses(currentAccount.value)
+            console.log('currentNftBalance.value, deployAddresses.value', currentNftBalance.value, deployAddresses.value)
           }
         } catch (err) {
           if (err.code === 4001) {
@@ -99,31 +150,34 @@
             console.error(err);
           }
         }
-        currentNftBalance.value = await getNftBalance(currentAccount.value)
         console.log('currentAccount.value', currentAccount.value)
         console.log('isConnected.value', isConnected.value)
       };
 
       const sendCommit = async() =>{
-
-        console.log('alskdnalskn')
         if (typeof window.ethereum !== 'undefined') {
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
-            const contractAddress = '0xf20aca635cc4efcd5709cc1e78db4476a075db1b';
+            const contractAddress = factoryAddress;
             const contract = new ethers.Contract(contractAddress, abi, signer);
             const saltHex = ethers.utils.hexlify(parseInt(salt.value));
             const saltHash = ethers.utils.keccak256(ethers.utils.hexZeroPad(saltHex, 32));
             try {
                 const transactionResponse = await contract.commit(saltHash, {
-                gasLimit: ethers.utils.hexlify(100000)
+                gasLimit: ethers.utils.hexlify(200000)
                 });
 
-                console.log(transactionResponse);
-                mint(contract, ethers.utils.hexZeroPad(saltHex, 32))
-            } catch (error) {
-                console.error('Error occurred: ', error);
-            }
+                const receipt = await transactionResponse.wait();
+
+                if(receipt.status === 1) {
+                    mint(contract, ethers.utils.hexZeroPad(saltHex, 32))
+                }
+                else {
+                    console.log('Transaction failed');
+                }
+                } catch (error) {
+                    console.error('Error occurred: ', error);
+                }
           } else {
               console.log('Please install MetaMask!');
           }
@@ -132,7 +186,7 @@
       const mint = async(contract, saltBytes32) =>{
         try {
             const transactionResponse = await contract.mint(saltBytes32, {
-            gasLimit: ethers.utils.hexlify(200000)
+            gasLimit: ethers.utils.hexlify(300000)
             });
 
             console.log(transactionResponse);
@@ -145,13 +199,37 @@
         if (typeof window.ethereum !== 'undefined') {
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
-            const contractAddress = '0xf20aca635cc4efcd5709cc1e78db4476a075db1b';
+            const contractAddress = factoryAddress;
             const contract = new ethers.Contract(contractAddress, abi, signer);
             const saltHash = saltHashDeploy.value;
             const byteCode = byteCodeDeploy.value;
             try {
                 const transactionResponse = await contract.deploy(saltHash, byteCode, {
-                    gasLimit: ethers.utils.hexlify(300000)
+                    gasLimit: ethers.utils.hexlify(10000000)
+                });
+
+                console.log(transactionResponse);
+            } catch (error) {
+                console.error('Error occurred: ', error);
+            }
+            } else {
+                console.log('Please install MetaMask!');
+            }
+      }
+
+      const deploySafe = async() =>{
+        if (typeof window.ethereum !== 'undefined') {
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner();
+            const contractAddress = factoryAddress;
+            const contract = new ethers.Contract(contractAddress, abi, signer);
+            const saltHash = saltHashDeploy.value
+            const threshold_ = threshold.value;
+            const inputs_ = inputs.value;
+
+            try {
+                const transactionResponse = await contract.deploySafe(saltHash, inputs_, threshold_, {
+                    gasLimit: ethers.utils.hexlify(1000000)
                 });
 
                 console.log(transactionResponse);
@@ -163,15 +241,9 @@
             }
       }
   
-      const disconnectWallet = async () => {
-          currentAccount.value = null;
-          isConnected.value = false;
-          console.log('currentAccount.value', currentAccount.value)
-          console.log('isConnected.value', isConnected.value)
-      };
-  
       onMounted(async () => {
         const provider = await detectEthereumProvider();
+        enableEthereum()
   
         if (provider) {
           if (provider !== window.ethereum) {
@@ -186,6 +258,9 @@
       });
   
       return {
+        threshold,
+        set_salt, 
+        deployAddresses,
         currentNftBalance,
         tab, 
         addInput,
@@ -194,10 +269,11 @@
         enableEthereum,
         salt,
         deploy,
+        deploySafe,
         sendCommit,
         saltHashDeploy,
-        isConnected,
-        disconnectWallet
+        byteCodeDeploy,
+        isConnected
       };
     }
   }
@@ -272,6 +348,9 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
     }
+    .form-control-threshold{
+      width: 30%;
+    }
 
     .menu button:hover {
       background-color: #afc5e4;
@@ -281,7 +360,9 @@
       background-color: #007bff;
       color: white;
     }
-
+    .label-address {
+      cursor: pointer;
+    }
 
     .top-right-buttons {
       position: absolute;
