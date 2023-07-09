@@ -36,7 +36,7 @@
           </div>
             <div class="form-group">
             <label for="saltHash">tokenId:</label>
-            <input type="text" class="form-control" id="saltHashDeploy" v-model="saltHashDeploy">
+            <input type="text" disabled class="form-control" id="saltHashDeploy" v-model="saltHashDeploy">
             <label for="byteCode">byteCode:</label>
             <input type="text" class="form-control" id="byteCodeDeploy" v-model="byteCodeDeploy">
             </div>
@@ -63,7 +63,7 @@
           </div>
           <div class="form-group">
             <label for="saltHash">tokenId:</label>
-            <input type="text" class="form-control" id="saltHashDeploy" v-model="saltHashDeploy">
+            <input type="text" disabled class="form-control" id="saltHashDeploy" v-model="saltHashDeploy">
             </div>
           <button type="submit" class="btn btn-primary">Deploy contract</button>
         </form>
@@ -350,6 +350,7 @@
     }
     .form-control-threshold{
       width: 30%;
+      text-align: center;
     }
 
     .menu button:hover {
