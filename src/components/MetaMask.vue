@@ -35,7 +35,7 @@
             <label class="label-address" :for="'input'+index" @click="set_salt(deployAddress)">{{ deployAddress.toHexString() }}</label>
           </div>
             <div class="form-group">
-            <label for="saltHash">saltHash:</label>
+            <label for="saltHash">tokenId:</label>
             <input type="text" class="form-control" id="saltHashDeploy" v-model="saltHashDeploy">
             <label for="byteCode">byteCode:</label>
             <input type="text" class="form-control" id="byteCodeDeploy" v-model="byteCodeDeploy">
@@ -62,7 +62,7 @@
             <input type="text" class="form-control-threshold" :id="threshold" v-model="threshold">
           </div>
           <div class="form-group">
-            <label for="saltHash">saltHash:</label>
+            <label for="saltHash">tokenId:</label>
             <input type="text" class="form-control" id="saltHashDeploy" v-model="saltHashDeploy">
             </div>
           <button type="submit" class="btn btn-primary">Deploy contract</button>
