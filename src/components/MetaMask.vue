@@ -245,6 +245,7 @@
         const provider = await detectEthereumProvider();
   
         if (provider) {
+          enableEthereum()
           if (provider !== window.ethereum) {
             console.error('Do you have multiple wallets installed?');
           } else {
