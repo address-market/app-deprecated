@@ -2,7 +2,7 @@
   <div class="container">
     <div class="top-right-buttons">
       <button v-if="!isConnected" id="connectWallet" class="connect-button" @click="enableEthereum">Connect wallet</button>
-      <button v-else id="disconnectWallet" class="disconnect-button">{{ currentAccount }}</button>
+      <button v-else id="disconnectWallet" class="disconnect-button">{{ currentAccount.slice(0, 6)+'......'+currentAccount.slice(-6) }}</button>
     </div>
     <div class="account">
       <h2 class="mb-3">Account: <span id="currentAccount"></span></h2>
@@ -14,7 +14,7 @@
       <div class="menu">
         <button @click="tab = 'commit'" :class="{ active: tab === 'commit' }">Commit</button>
         <button @click="tab = 'deploy'" :class="{ active: tab === 'deploy' }">Deploy</button>
-        <button @click="tab = 'safe'" :class="{ active: tab === 'safe' }">Safe</button>
+        <button @click="tab = 'safe'" :class="{ active: tab === 'safe' }">SafeDeploy</button>
       </div>
       
       <div v-if="tab==='commit'" class="form-container">
@@ -91,7 +91,7 @@
       const threshold = ref(0)
       const tab = ref('commit')
 
-      const factoryAddress = '0x39Fa0171672765Abf9A645912dd31f76bD58f00A'
+      const factoryAddress = '0x4ddda3C7fa1e9990fD3F3b35C30cBd859920aB44'
 
       const addInput = () => {
         inputs.value.push(''); // add new input to the array
@@ -243,7 +243,6 @@
   
       onMounted(async () => {
         const provider = await detectEthereumProvider();
-        enableEthereum()
   
         if (provider) {
           if (provider !== window.ethereum) {
